@@ -214,3 +214,16 @@ ENV/
 
 # Apple specific
 .DS_Store
+
+# Terraform state
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Terraform variable files
+terraform.tfvars
+*.tfvars
+
+# Terraform local directories
+.terraform/
+.terraform.lock.hcl

@@ -11,7 +11,7 @@ dashboard = meraki.DashboardAPI(
     suppress_logging=True
 )
 
-NEW_SITE_NAME = "Site-001"  # example site name, change as needed
+NEW_SITE_NAME = "Site-002"  # example site name, change as needed
 
 # 1) First org
 orgs = dashboard.organizations.getOrganizations()
