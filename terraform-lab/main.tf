@@ -1,3 +1,20 @@
+# How to run
+
+# terraform init
+# terraform validate
+# terraform plan -var-file="terraform.tfvars"
+# terraform apply -var-file="terraform.tfvars"
+# terraform destroy -var-file="terraform.tfvars"
+
+# This tf file:
+# 1. Creates all 5 sites
+# Creates VLAN settings for all 5
+# Creates all VLANs for all 5 sites
+# Creates firewall rules for all 5
+# Creates SSID 0 for all 5
+# Only claims a Meraki device for sites where device_serials is not empty.
+# This allows you to deploy settings without a Meraki yet.
+
 terraform {
   required_providers {
     meraki = {
@@ -7,85 +24,124 @@ terraform {
   }
 }
 
+###############################################################################
+# Provider
+# Note - This uses var.meraki_api_key. For production, move the API key to environment 
+# variables or a secret store.
+###############################################################################
 provider "meraki" {
   api_key = var.meraki_api_key
 }
 
-# Site / Network
-resource "meraki_network" "site" {
-  organization_id = var.org_id
-  name            = var.site_name
-  product_types   = ["appliance", "wireless"]
-  time_zone       = "America/Chicago"
+###############################################################################
+# Network / Site
+###############################################################################
+locals {
+  vlan_names = {
+    "100" = "Management"
+    "10"  = "Server"
+    "20"  = "Workstations"
+    "40"  = "IoT"
+    "50"  = "Voice"
+    "60"  = "Printers"
+    "70"  = "PCN"
+    "80"  = "Guest"
+    "90"  = "InfoSec"
+  }
+
+  site_vlans = merge([
+    for site_key, site in var.sites : {
+      for vlan_id, vlan_data in site.vlans : "${site_key}-${vlan_id}" => {
+        site_key     = site_key
+        vlan_id      = vlan_id
+        vlan_name    = lookup(local.vlan_names, vlan_id, "VLAN-${vlan_id}")
+        subnet       = vlan_data.subnet
+        appliance_ip = vlan_data.appliance_ip
+      }
+    }
+  ]...)
+
+  firewall_rules_by_site = {
+    for site_key, site in var.sites : site_key => concat(
+      flatten([
+        for src_vlan_id, src_vlan in site.vlans : [
+          for dst_vlan_id, dst_vlan in site.vlans : {
+            comment        = "Deny ${lookup(local.vlan_names, src_vlan_id, src_vlan_id)} to ${lookup(local.vlan_names, dst_vlan_id, dst_vlan_id)}"
+            policy         = "deny"
+            protocol       = "any"
+            src_cidr       = src_vlan.subnet
+            src_port       = "Any"
+            dest_cidr      = dst_vlan.subnet
+            dest_port      = "Any"
+            syslog_enabled = false
+          } if src_vlan_id != dst_vlan_id
+        ]
+      ]),
+      [
+        {
+          comment        = "Allow everything else"
+          policy         = "allow"
+          protocol       = "any"
+          src_cidr       = "Any"
+          src_port       = "Any"
+          dest_cidr      = "Any"
+          dest_port      = "Any"
+          syslog_enabled = false
+        }
+      ]
+    )
+  }
 }
 
-# Create VLANs
+resource "meraki_network" "site" {
+  for_each = var.sites
+
+  organization_id = var.org_id
+  name            = each.value.site_name
+  product_types   = ["appliance", "wireless"]
+  time_zone       = var.time_zone
+}
+
+resource "meraki_network_device_claim" "claim_devices" {
+  for_each = {
+    for site_key, site in var.sites : site_key => site
+    if length(site.device_serials) > 0
+  }
+
+  network_id = meraki_network.site[each.key].id
+  serials    = each.value.device_serials
+}
+
 resource "meraki_appliance_vlans_settings" "vlans_on" {
-  network_id    = meraki_network.site.id
+  for_each = var.sites
+
+  network_id    = meraki_network.site[each.key].id
   vlans_enabled = true
 }
 
-resource "meraki_appliance_vlan" "private" {
-  network_id   = meraki_network.site.id
-  vlan_id      = "10"
-  name         = "Private"
-  subnet       = "10.10.10.0/24"
-  appliance_ip = "10.10.10.1"
+resource "meraki_appliance_vlan" "vlans" {
+  for_each = local.site_vlans
+
+  network_id   = meraki_network.site[each.value.site_key].id
+  vlan_id      = each.value.vlan_id
+  name         = each.value.vlan_name
+  subnet       = each.value.subnet
+  appliance_ip = each.value.appliance_ip
 
   depends_on = [meraki_appliance_vlans_settings.vlans_on]
 }
 
-resource "meraki_appliance_vlan" "public" {
-  network_id   = meraki_network.site.id
-  vlan_id      = "20"
-  name         = "Public"
-  subnet       = "10.10.20.0/24"
-  appliance_ip = "10.10.20.1"
+resource "meraki_appliance_l3_firewall_rules" "isolate_all_vlans" {
+  for_each = var.sites
 
-  depends_on = [meraki_appliance_vlans_settings.vlans_on]
+  network_id = meraki_network.site[each.key].id
+  rules      = local.firewall_rules_by_site[each.key]
 }
 
-# MX layer 3 FIREWALL for inter-VLAN isolation ---
-resource "meraki_appliance_l3_firewall_rules" "isolate_vlans" {
-  network_id = meraki_network.site.id
-
-  rules = [
-    {
-      comment        = "Block Private to Public"
-      policy         = "deny"
-      protocol       = "any"
-      src_cidr       = "10.10.10.0/24"
-      src_port       = "Any"
-      dest_cidr      = "10.10.20.0/24"
-      dest_port      = "Any"
-      syslog_enabled = false
-    },
-    {
-      comment        = "Block Public to Private"
-      policy         = "deny"
-      protocol       = "any"
-      src_cidr       = "10.10.20.0/24"
-      src_port       = "Any"
-      dest_cidr      = "10.10.10.0/24"
-      dest_port      = "Any"
-      syslog_enabled = false
-    },
-    {
-      comment        = "Allow everything else"
-      policy         = "allow"
-      protocol       = "any"
-      src_cidr       = "Any"
-      src_port       = "Any"
-      dest_cidr      = "Any"
-      dest_port      = "Any"
-      syslog_enabled = false
-    }
-  ]
-}
-
-#  WIFI SSID (slot 0)
 resource "meraki_wireless_ssid" "ssid0" {
-  network_id = meraki_network.site.id
+  for_each = var.sites
+
+  network_id = meraki_network.site[each.key].id
   number     = 0
 
   name    = var.ssid_name
@@ -95,3 +151,11 @@ resource "meraki_wireless_ssid" "ssid0" {
   encryption_mode = "wpa"
   psk             = var.ssid_psk
 }
+
+
+###############################################################################
+# Enable VLANs on the MX
+# Example shape for MX appliance ports
+# Set all of the Meraki ports to VLAN 100
+# I haven't figured out how to do this yet
+###############################################################################
