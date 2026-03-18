@@ -30,10 +30,10 @@ dashboard.appliance.updateNetworkApplianceVlansSettings(
 # Create VLAN 10 named Private
 response = dashboard.appliance.createNetworkApplianceVlan(
     network_id,
-    "10",                     # VLAN ID
-    "Private",                # Name
-    subnet="10.10.10.0/24",   # Subnet
-    applianceIp="10.10.10.1"  # Gateway IP
+    "80",                     # VLAN ID
+    "Servers",                # Name
+    subnet="10.10.80.0/24",   # Subnet
+    applianceIp="10.10.80.1"  # Gateway IP
 )
 
 print("Created VLAN:")
