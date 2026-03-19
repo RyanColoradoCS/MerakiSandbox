@@ -150,6 +150,7 @@ resource "meraki_appliance_l3_firewall_rules" "isolate_all_vlans" {
   rules      = local.firewall_rules_by_site[each.key]
 }
 
+/*
 resource "meraki_wireless_ssid" "ssid0" {
   for_each = var.sites
 
@@ -163,7 +164,7 @@ resource "meraki_wireless_ssid" "ssid0" {
   encryption_mode = "wpa"
   psk             = var.ssid_psk
 }
-
+*/
 
 ###############################################################################
 # Enable VLANs on the MX
@@ -171,3 +172,23 @@ resource "meraki_wireless_ssid" "ssid0" {
 # Set all of the Meraki ports to VLAN 100
 # I haven't figured out how to do this yet
 ###############################################################################
+resource "meraki_appliance_ports" "mx64_lan_ports" {
+  for_each = {
+    for k, v in var.sites : k => v
+    if length(v.ports) > 0
+  }
+
+  organization_id = var.org_id
+  network_id      = meraki_network.site[each.key].id
+
+  items = [
+    for port_id, port in each.value.ports : {
+      port_id               = port_id
+      enabled               = port.enabled
+      type                  = port.type
+      vlan                  = port.vlan
+      allowed_vlans         = try(port.allowed_vlans, null)
+      drop_untagged_traffic = try(port.drop_untagged_traffic, null)
+    }
+  ]
+}

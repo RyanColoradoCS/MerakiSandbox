@@ -26,17 +26,18 @@ variable "time_zone" {
 
 ###############################################################################
 # WiFi Settings (applies to all sites)
+# Editing out because we don't use Meraki Wi-Fi
 ###############################################################################
-variable "ssid_name" {
-  description = "SSID name"
-  type        = string
-}
+# variable "ssid_name" {
+#  description = "SSID name"
+#  type        = string
+# }
 
-variable "ssid_psk" {
-  description = "SSID password"
-  type        = string
-  sensitive   = true
-}
+# variable "ssid_psk" {
+#  description = "SSID password"
+#  type        = string
+#  sensitive   = true
+# }
 
 ###############################################################################
 # Sites configuration
@@ -57,5 +58,13 @@ variable "sites" {
       subnet       = string
       appliance_ip = string
     }))
+
+    ports = optional(map(object({
+      enabled               = bool
+      type                  = string
+      vlan                  = number
+      allowed_vlans         = optional(string)
+      drop_untagged_traffic = optional(bool)
+    })), {})
   }))
 }
