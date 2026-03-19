@@ -107,7 +107,6 @@ locals {
 
 resource "meraki_network" "site" {
   for_each = var.sites
-
   organization_id = var.org_id
   name            = each.value.site_name
   product_types   = ["appliance", "wireless"]
