@@ -167,6 +167,12 @@ resource "meraki_appliance_ports" "mx64_lan_ports" {
   organization_id = var.org_id
   network_id      = meraki_network.site[each.key].id
 
+  depends_on = [
+    meraki_appliance_vlans_settings.vlans_on,
+    meraki_appliance_vlan.vlans
+  ]
+
+
   items = [
     for port_id, port in each.value.ports : {
       port_id               = port_id
