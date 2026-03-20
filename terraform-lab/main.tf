@@ -5,19 +5,6 @@
 # terraform apply -var-file="terraform.tfvars"
 # terraform destroy -var-file="terraform.tfvars"
 
-# How to run single sites
-# terraform plan \
-#  -var-file="Sites/site5.tfvars" \
-#  -state="state/site5.tfstate"
-
-# terraform apply \
-#  -var-file="Sites/site5.tfvars" \
-#  -state="state/site5.tfstate"
-
-# terraform destroy \
-#  -var-file="Sites/site5.tfvars" \
-#  -state="state/site5.tfstate"
-
 # This tf file:
 # 1. Creates all 5 sites
 # Creates VLAN settings for all 5
