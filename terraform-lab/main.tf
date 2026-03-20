@@ -10,9 +10,9 @@
 # Creates VLAN settings for all 5
 # Creates all VLANs for all 5 sites
 # Creates firewall rules for all 5
-# Creates SSID 0 for all 5
 # Only claims a Meraki device for sites where device_serials is not empty.
-# This allows you to deploy settings without a Meraki yet.
+# This allows you to deploy settings without a Meraki yet
+# Set ports on the back of the Meraki
 
 terraform {
   required_providers {

@@ -2,6 +2,10 @@ import os
 import meraki
 
 # export MERAKI_DASHBOARD_API_KEY="your_api_key_here"
+# python3 meraki-lab/create_network.py
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # Get API key from environment variable
 api_key = os.environ.get("MERAKI_DASHBOARD_API_KEY")
