@@ -1,3 +1,12 @@
+/*
+variables.tf = defines the variable schema 
+terraform.tfvars = provides the values 
+
+variables.tf = function parameters 
+terraform.tfvars = arguments passed in
+*/
+
+
 ###############################################################################
 # Meraki API Key
 ###############################################################################

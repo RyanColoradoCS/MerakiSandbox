@@ -2,7 +2,8 @@ import os
 import meraki
 
 # export MERAKI_DASHBOARD_API_KEY="your_api_key_here"
-# python3 meraki-lab/create_network.py
+# WSL isn't working with VS COde on imports in virtual enviornment
+# so I have to manually run this code: python3 meraki-lab/create_network.py
 
 from dotenv import load_dotenv
 load_dotenv()

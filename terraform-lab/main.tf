@@ -1,10 +1,3 @@
-# How to run - multiple sites
-# terraform init
-# terraform validate
-# terraform plan -var-file="terraform.tfvars"
-# terraform apply -var-file="terraform.tfvars"
-# terraform destroy -var-file="terraform.tfvars"
-
 # This tf file:
 # 1. Creates all 5 sites
 # Creates VLAN settings for all 5
@@ -24,7 +17,7 @@ terraform {
 }
 
 ###############################################################################
-# Provider
+# Provider - This connects Terraform to the Meraki Dashboard API
 # Note - This uses var.meraki_api_key. For production, move the API key to environment 
 # variables or a secret store.
 ###############################################################################
@@ -92,6 +85,7 @@ locals {
   }
 }
 
+# https://registry.terraform.io/providers/CiscoDevNet/meraki/latest/docs/data-sources/network
 resource "meraki_network" "site" {
   for_each = var.sites
   organization_id = var.org_id
@@ -100,6 +94,7 @@ resource "meraki_network" "site" {
   time_zone       = var.time_zone
 }
 
+# https://registry.terraform.io/providers/CiscoDevNet/meraki/latest/docs/resources/network_device_claim
 resource "meraki_network_device_claim" "claim_devices" {
   for_each = {
     for site_key, site in var.sites : site_key => site
@@ -110,6 +105,7 @@ resource "meraki_network_device_claim" "claim_devices" {
   serials    = each.value.device_serials
 }
 
+# https://registry.terraform.io/providers/CiscoDevNet/meraki/latest/docs/resources/appliance_vlans_settings
 resource "meraki_appliance_vlans_settings" "vlans_on" {
   for_each = var.sites
 
@@ -117,6 +113,7 @@ resource "meraki_appliance_vlans_settings" "vlans_on" {
   vlans_enabled = true
 }
 
+# https://registry.terraform.io/providers/CiscoDevNet/meraki/latest/docs/resources/appliance_vlan
 resource "meraki_appliance_vlan" "vlans" {
   for_each = local.site_vlans
 
