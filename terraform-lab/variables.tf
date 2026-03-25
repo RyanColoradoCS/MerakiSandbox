@@ -66,6 +66,12 @@ variable "sites" {
     vlans = map(object({
       subnet       = string
       appliance_ip = string
+      
+      fixed_ip_assignments = optional(map(object({
+              ip   = string
+              name = string
+            })), {})
+
     }))
 
     ports = optional(map(object({
@@ -77,3 +83,4 @@ variable "sites" {
     })), {})
   }))
 }
+

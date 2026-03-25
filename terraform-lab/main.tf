@@ -49,6 +49,8 @@ locals {
         vlan_name    = lookup(local.vlan_names, vlan_id, "VLAN-${vlan_id}")
         subnet       = vlan_data.subnet
         appliance_ip = vlan_data.appliance_ip
+        # fixed_ip_assignments = vlan_data.fixed_ip_assignments
+        fixed_ip_assignments = lookup(vlan_data, "fixed_ip_assignments", {})
       }
     }
   ]...)
@@ -122,6 +124,8 @@ resource "meraki_appliance_vlan" "vlans" {
   name         = each.value.vlan_name
   subnet       = each.value.subnet
   appliance_ip = each.value.appliance_ip
+
+  fixed_ip_assignments = each.value.fixed_ip_assignments
 
   depends_on = [meraki_appliance_vlans_settings.vlans_on]
 }
